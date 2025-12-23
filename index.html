@@ -7,10 +7,23 @@
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <div class="container">
+    <!-- Login Screen -->
+    <div id="loginScreen" class="login-screen">
+        <div class="login-container">
+            <h1>📅 Trym og Dina sin kalender</h1>
+            <p class="login-subtitle">Enter passcode to access</p>
+            <div class="login-form">
+                <input type="password" id="passcodeInput" placeholder="Enter passcode" />
+                <button id="loginBtn" class="btn btn-primary">Login</button>
+            </div>
+            <p class="login-hint">First time? Set your passcode by entering it above.</p>
+        </div>
+    </div>
+
+    <div class="container" id="mainApp" style="display: none;">
         <header>
-            <h1>📅 Shared Todo Calendar</h1>
-            <p class="subtitle">Manage your shared activities together</p>
+            <h1>📅 Trym og Dina sin kalender</h1>
+            <p class="subtitle">Sånn at du aldri glemme nokka viktig igjen!</p>
         </header>
 
         <div class="main-content">
@@ -18,7 +31,7 @@
             <section class="todo-input-section">
                 <h2>Add New Todo</h2>
                 <div class="input-group">
-                    <input type="text" id="todoText" placeholder="What needs to be done?" />
+                    <input type="text" id="todoText" placeholder="Ka skal gjøres?" />
                     <input type="date" id="todoDate" />
                     <button id="addTodoBtn" class="btn btn-primary">Add Todo</button>
                 </div>
@@ -36,11 +49,19 @@
 
             <!-- Todo List Section -->
             <section class="todo-list-section">
-                <h2>All Todos</h2>
+                <div class="section-header">
+                    <h2>All Todos</h2>
+                    <button id="logoutBtn" class="btn-logout">🚪 Logout</button>
+                </div>
                 <div class="filter-buttons">
                     <button class="filter-btn active" data-filter="all">All</button>
                     <button class="filter-btn" data-filter="upcoming">Upcoming</button>
                     <button class="filter-btn" data-filter="completed">Completed</button>
+                </div>
+                <div class="person-filter-buttons">
+                    <button class="person-filter-btn active" data-person="both">👥 Begge</button>
+                    <button class="person-filter-btn" data-person="person1">👤 Trym</button>
+                    <button class="person-filter-btn" data-person="person2">👤 Dina</button>
                 </div>
                 <div id="todoList" class="todo-list"></div>
             </section>

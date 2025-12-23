@@ -23,6 +23,73 @@ body {
     color: var(--dark-text);
 }
 
+/* Login Screen */
+.login-screen {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    z-index: 1000;
+}
+
+.login-container {
+    background: white;
+    padding: 50px;
+    border-radius: 16px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+    text-align: center;
+    max-width: 400px;
+    width: 90%;
+}
+
+.login-container h1 {
+    color: var(--primary-color);
+    margin-bottom: 10px;
+    font-size: 2em;
+}
+
+.login-subtitle {
+    color: #666;
+    margin-bottom: 30px;
+    font-size: 1.1em;
+}
+
+.login-form {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.login-form input {
+    padding: 15px;
+    border: 2px solid var(--border-color);
+    border-radius: 8px;
+    font-size: 1.1em;
+    text-align: center;
+}
+
+.login-form input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+}
+
+.login-form button {
+    padding: 15px;
+    font-size: 1.1em;
+}
+
+.login-hint {
+    margin-top: 20px;
+    color: #999;
+    font-size: 0.9em;
+}
+
 .container {
     max-width: 1200px;
     margin: 0 auto;
@@ -197,9 +264,33 @@ header h1 {
 }
 
 /* Todo List Section */
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
 .todo-list-section h2 {
     color: var(--primary-color);
-    margin-bottom: 15px;
+    margin: 0;
+}
+
+.btn-logout {
+    background-color: var(--danger-color);
+    color: white;
+    padding: 8px 16px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.9em;
+    transition: all 0.3s;
+    font-weight: 600;
+}
+
+.btn-logout:hover {
+    background-color: #c9302c;
+    transform: translateY(-2px);
 }
 
 .filter-buttons {
@@ -225,6 +316,32 @@ header h1 {
     background-color: var(--primary-color);
     color: white;
     border-color: var(--primary-color);
+}
+
+.person-filter-buttons {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.person-filter-btn {
+    padding: 8px 16px;
+    border: 2px solid var(--border-color);
+    background-color: white;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.3s;
+    font-weight: 600;
+}
+
+.person-filter-btn:hover {
+    border-color: var(--secondary-color);
+}
+
+.person-filter-btn.active {
+    background-color: var(--secondary-color);
+    color: white;
+    border-color: var(--secondary-color);
 }
 
 .todo-list {

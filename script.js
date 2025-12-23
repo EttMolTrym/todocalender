@@ -2,6 +2,26 @@
 class TodoStorage {
     constructor() {
         this.storageKey = 'sharedTodos';
+        this.passcodeKey = 'appPasscode';
+    }
+
+    // Passcode methods
+    getPasscode() {
+        return localStorage.getItem(this.passcodeKey);
+    }
+
+    setPasscode(passcode) {
+        localStorage.setItem(this.passcodeKey, passcode);
+    }
+
+    verifyPasscode(passcode) {
+        const stored = this.getPasscode();
+        if (!stored) {
+            // First time - set the passcode
+            this.setPasscode(passcode);
+            return true;
+        }
+        return stored === passcode;
     }
 
     getTodos() {
@@ -98,12 +118,58 @@ class TodoCalendarApp {
         this.storage = new TodoStorage();
         this.calendar = new CalendarManager();
         this.currentFilter = 'all';
+        this.currentPersonFilter = 'both';
+        this.isAuthenticated = false;
         this.init();
     }
 
     init() {
-        this.setupEventListeners();
-        this.render();
+        this.checkAuthentication();
+    }
+
+    checkAuthentication() {
+        // Show login screen
+        document.getElementById('loginScreen').style.display = 'flex';
+        document.getElementById('mainApp').style.display = 'none';
+        
+        // Setup login handler
+        const loginBtn = document.getElementById('loginBtn');
+        const passcodeInput = document.getElementById('passcodeInput');
+        
+        loginBtn.addEventListener('click', () => this.handleLogin());
+        passcodeInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') this.handleLogin();
+        });
+        
+        passcodeInput.focus();
+    }
+
+    handleLogin() {
+        const passcode = document.getElementById('passcodeInput').value.trim();
+        
+        if (!passcode) {
+            alert('Please enter a passcode');
+            return;
+        }
+        
+        if (this.storage.verifyPasscode(passcode)) {
+            this.isAuthenticated = true;
+            document.getElementById('loginScreen').style.display = 'none';
+            document.getElementById('mainApp').style.display = 'block';
+            this.setupEventListeners();
+            this.render();
+        } else {
+            alert('Incorrect passcode. Please try again.');
+            document.getElementById('passcodeInput').value = '';
+        }
+    }
+
+    logout() {
+        this.isAuthenticated = false;
+        document.getElementById('loginScreen').style.display = 'flex';
+        document.getElementById('mainApp').style.display = 'none';
+        document.getElementById('passcodeInput').value = '';
+        document.getElementById('passcodeInput').focus();
     }
 
     setupEventListeners() {
@@ -135,6 +201,19 @@ class TodoCalendarApp {
                 this.renderTodoList();
             });
         });
+
+        // Person filter buttons
+        document.querySelectorAll('.person-filter-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                document.querySelectorAll('.person-filter-btn').forEach(b => b.classList.remove('active'));
+                e.target.classList.add('active');
+                this.currentPersonFilter = e.target.dataset.person;
+                this.renderTodoList();
+            });
+        });
+
+        // Logout button
+        document.getElementById('logoutBtn').addEventListener('click', () => this.logout());
 
         // Set default date to today
         const today = new Date().toISOString().split('T')[0];
@@ -290,6 +369,13 @@ class TodoCalendarApp {
             todos = todos.filter(t => t.person1Done && t.person2Done);
         }
 
+        // Apply person filter
+        if (this.currentPersonFilter === 'person1') {
+            todos = todos.filter(t => !t.person1Done);
+        } else if (this.currentPersonFilter === 'person2') {
+            todos = todos.filter(t => !t.person2Done);
+        }
+
         // Clear list
         todoListEl.innerHTML = '';
 
@@ -345,7 +431,7 @@ class TodoCalendarApp {
         
         const person1Label = document.createElement('span');
         person1Label.className = 'person-label';
-        person1Label.textContent = 'Person 1:';
+        person1Label.textContent = 'Trym:';
         
         const person1Checkbox = document.createElement('input');
         person1Checkbox.type = 'checkbox';
@@ -362,7 +448,7 @@ class TodoCalendarApp {
         
         const person2Label = document.createElement('span');
         person2Label.className = 'person-label';
-        person2Label.textContent = 'Person 2:';
+        person2Label.textContent = 'Dina:';
         
         const person2Checkbox = document.createElement('input');
         person2Checkbox.type = 'checkbox';
