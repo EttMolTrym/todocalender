@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shared Todo Calendar</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📅 Shared Todo Calendar</h1>
+            <p class="subtitle">Manage your shared activities together</p>
+        </header>
+
+        <div class="main-content">
+            <!-- Todo Input Section -->
+            <section class="todo-input-section">
+                <h2>Add New Todo</h2>
+                <div class="input-group">
+                    <input type="text" id="todoText" placeholder="What needs to be done?" />
+                    <input type="date" id="todoDate" />
+                    <button id="addTodoBtn" class="btn btn-primary">Add Todo</button>
+                </div>
+            </section>
+
+            <!-- Calendar Section -->
+            <section class="calendar-section">
+                <div class="calendar-header">
+                    <button id="prevMonth" class="btn btn-nav">◄</button>
+                    <h2 id="currentMonth"></h2>
+                    <button id="nextMonth" class="btn btn-nav">►</button>
+                </div>
+                <div id="calendar" class="calendar-grid"></div>
+            </section>
+
+            <!-- Todo List Section -->
+            <section class="todo-list-section">
+                <h2>All Todos</h2>
+                <div class="filter-buttons">
+                    <button class="filter-btn active" data-filter="all">All</button>
+                    <button class="filter-btn" data-filter="upcoming">Upcoming</button>
+                    <button class="filter-btn" data-filter="completed">Completed</button>
+                </div>
+                <div id="todoList" class="todo-list"></div>
+            </section>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
