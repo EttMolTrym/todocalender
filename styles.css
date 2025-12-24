@@ -136,7 +136,8 @@ header h1 {
     flex-wrap: wrap;
 }
 
-.input-group input {
+.input-group input,
+.input-group select {
     flex: 1;
     min-width: 200px;
     padding: 12px;
@@ -145,7 +146,8 @@ header h1 {
     font-size: 1em;
 }
 
-.input-group input:focus {
+.input-group input:focus,
+.input-group select:focus {
     outline: none;
     border-color: var(--primary-color);
 }
@@ -344,6 +346,59 @@ header h1 {
     border-color: var(--secondary-color);
 }
 
+.category-filter-buttons {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.category-filter-btn {
+    padding: 8px 16px;
+    border: 2px solid var(--border-color);
+    background-color: white;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.3s;
+    font-weight: 600;
+}
+
+.category-filter-btn:hover {
+    border-color: #ff9800;
+}
+
+.category-filter-btn.active {
+    background-color: #ff9800;
+    color: white;
+    border-color: #ff9800;
+}
+
+.category-filter-btn[data-category="Lekser"]:hover {
+    border-color: #2196F3;
+}
+
+.category-filter-btn[data-category="Lekser"].active {
+    background-color: #2196F3;
+    border-color: #2196F3;
+}
+
+.category-filter-btn[data-category="Handling"]:hover {
+    border-color: #4CAF50;
+}
+
+.category-filter-btn[data-category="Handling"].active {
+    background-color: #4CAF50;
+    border-color: #4CAF50;
+}
+
+.category-filter-btn[data-category="Gjøremål"]:hover {
+    border-color: #FF9800;
+}
+
+.category-filter-btn[data-category="Gjøremål"].active {
+    background-color: #FF9800;
+    border-color: #FF9800;
+}
+
 .todo-list {
     display: flex;
     flex-direction: column;
@@ -368,6 +423,8 @@ header h1 {
     justify-content: space-between;
     align-items: flex-start;
     margin-bottom: 12px;
+    flex-wrap: wrap;
+    gap: 10px;
 }
 
 .todo-title {
@@ -375,6 +432,7 @@ header h1 {
     font-weight: 600;
     color: var(--dark-text);
     flex: 1;
+    min-width: 200px;
 }
 
 .todo-date {
@@ -385,10 +443,63 @@ header h1 {
     border-radius: 4px;
 }
 
+.todo-time {
+    color: white;
+    background-color: #FF9800;
+    font-size: 0.9em;
+    padding: 4px 10px;
+    border-radius: 16px;
+    align-self: center;
+}
+
+.category-badge {
+    font-size: 0.85em;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-weight: 600;
+    color: white;
+    background-color: #ff9800;
+}
+
+.category-badge.category-lekser {
+    background-color: #2196F3;
+}
+
+.category-badge.category-handling {
+    background-color: #4CAF50;
+}
+
+.category-badge.category-gjoemål {
+    background-color: #FF9800;
+}
+
+.category-badge.category-uncategorized {
+    background-color: #999;
+}
+
 .todo-status {
     display: flex;
     gap: 15px;
     margin-top: 12px;
+}
+
+.todo-notes {
+    margin-top: 12px;
+    background: white;
+    border-radius: 6px;
+    padding: 10px 12px;
+}
+
+.todo-notes .notes-title {
+    font-weight: 600;
+    margin-bottom: 6px;
+    color: var(--dark-text);
+}
+
+.todo-notes ul {
+    list-style: disc inside;
+    display: grid;
+    gap: 4px;
 }
 
 .person-status {

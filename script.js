@@ -1,63 +1,149 @@
-// Todo Storage Manager
-class TodoStorage {
+// Supabase configuration (fill these with your project values)
+const SUPABASE_URL = 'https://xfstsypxoremvfxyeemo.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhmc3RzeXB4b3JlbXZmeHllZW1vIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY1MjczMzMsImV4cCI6MjA4MjEwMzMzM30.u7OKnMqsAw6tDI3uMHvE6hxH3qCyV5kV4AgltuUckr0';  // Should start with eyJ...
+const hasValidSupabase = (typeof supabase !== 'undefined')
+    && !!SUPABASE_URL && !!SUPABASE_ANON_KEY
+    && !String(SUPABASE_URL).startsWith('REPLACE')
+    && !String(SUPABASE_ANON_KEY).startsWith('REPLACE')
+    && !String(SUPABASE_ANON_KEY).startsWith('PASTE');
+const sbClient = hasValidSupabase ? supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
+
+async function sha256Hex(str) {
+    try {
+        if (typeof crypto !== 'undefined' && crypto.subtle) {
+            const buf = new TextEncoder().encode(str);
+            const hash = await crypto.subtle.digest('SHA-256', buf);
+            return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
+        }
+    } catch (_) {
+        // fall back to JS hash below
+    }
+    // Fallback: non-crypto hash (djb2 variant), sufficient as a stable room key
+    let h = 5381;
+    for (let i = 0; i < str.length; i++) {
+        h = ((h << 5) + h) ^ str.charCodeAt(i);
+    }
+    return Math.abs(h).toString(16);
+}
+
+// Hybrid Storage: uses Supabase when configured, otherwise localStorage
+class HybridStorage {
     constructor() {
         this.storageKey = 'sharedTodos';
-        this.passcodeKey = 'appPasscode';
+        this.roomId = null;
+        this.client = sbClient;
     }
 
-    // Passcode methods
-    getPasscode() {
-        return localStorage.getItem(this.passcodeKey);
+    setRoomId(roomId) {
+        this.roomId = roomId;
     }
 
-    setPasscode(passcode) {
-        localStorage.setItem(this.passcodeKey, passcode);
+    isRemote() {
+        return !!(this.client && this.roomId);
     }
 
-    verifyPasscode(passcode) {
-        const stored = this.getPasscode();
-        if (!stored) {
-            // First time - set the passcode
-            this.setPasscode(passcode);
-            return true;
+    async getTodos() {
+        if (this.isRemote()) {
+            const { data, error } = await this.client
+                .from('todos')
+                .select('*')
+                .eq('room_id', this.roomId)
+                .order('date', { ascending: true })
+                .order('created_at', { ascending: true });
+            if (error) {
+                console.error('Supabase getTodos error:', error);
+                return [];
+            }
+            return (data || []).map(row => ({
+                id: row.id,
+                text: row.text,
+                date: row.date,
+                category: row.category,
+                time: row.time || '',
+                notes: Array.isArray(row.notes) ? row.notes : (row.notes || []),
+                person1Done: !!row.person1_done,
+                person2Done: !!row.person2_done,
+                createdAt: row.created_at
+            }));
         }
-        return stored === passcode;
-    }
-
-    getTodos() {
         const todos = localStorage.getItem(this.storageKey);
         return todos ? JSON.parse(todos) : [];
     }
 
-    saveTodos(todos) {
-        localStorage.setItem(this.storageKey, JSON.stringify(todos));
-    }
-
-    addTodo(todo) {
-        const todos = this.getTodos();
+    async addTodo(todo) {
+        console.log('addTodo called, isRemote:', this.isRemote(), 'roomId:', this.roomId);
+        if (this.isRemote()) {
+            const payload = {
+                room_id: this.roomId,
+                text: todo.text,
+                date: todo.date,
+                category: todo.category,
+                time: todo.time || null,
+                notes: todo.notes || [],
+                person1_done: false,
+                person2_done: false
+            };
+            console.log('Inserting to Supabase:', payload);
+            const { data, error } = await this.client.from('todos').insert([payload]);
+            if (error) {
+                console.error('Supabase addTodo error:', error);
+                alert('Failed to save todo: ' + error.message);
+                return null;
+            }
+            console.log('Supabase insert successful:', data);
+            return null;
+        }
+        console.log('Adding to localStorage');
+        const todos = await this.getTodos();
         todo.id = Date.now().toString();
         todo.person1Done = false;
         todo.person2Done = false;
         todos.push(todo);
-        this.saveTodos(todos);
+        localStorage.setItem(this.storageKey, JSON.stringify(todos));
         return todo;
     }
 
-    updateTodo(id, updates) {
-        const todos = this.getTodos();
+    async updateTodo(id, updates) {
+        if (this.isRemote()) {
+            const changes = {};
+            if (typeof updates.person1Done === 'boolean') changes.person1_done = updates.person1Done;
+            if (typeof updates.person2Done === 'boolean') changes.person2_done = updates.person2Done;
+            if (updates.text !== undefined) changes.text = updates.text;
+            if (updates.date !== undefined) changes.date = updates.date;
+            if (updates.category !== undefined) changes.category = updates.category;
+            if (updates.time !== undefined) changes.time = updates.time;
+            if (updates.notes !== undefined) changes.notes = updates.notes;
+            const { error } = await this.client
+                .from('todos')
+                .update(changes)
+                .eq('id', id)
+                .eq('room_id', this.roomId);
+            if (error) console.error('Supabase updateTodo error:', error);
+            return null;
+        }
+        const todos = await this.getTodos();
         const index = todos.findIndex(t => t.id === id);
         if (index !== -1) {
             todos[index] = { ...todos[index], ...updates };
-            this.saveTodos(todos);
+            localStorage.setItem(this.storageKey, JSON.stringify(todos));
             return todos[index];
         }
         return null;
     }
 
-    deleteTodo(id) {
-        const todos = this.getTodos();
+    async deleteTodo(id) {
+        if (this.isRemote()) {
+            const { error } = await this.client
+                .from('todos')
+                .delete()
+                .eq('id', id)
+                .eq('room_id', this.roomId);
+            if (error) console.error('Supabase deleteTodo error:', error);
+            return;
+        }
+        const todos = await this.getTodos();
         const filtered = todos.filter(t => t.id !== id);
-        this.saveTodos(filtered);
+        localStorage.setItem(this.storageKey, JSON.stringify(filtered));
     }
 }
 
@@ -115,11 +201,14 @@ class CalendarManager {
 // Main App
 class TodoCalendarApp {
     constructor() {
-        this.storage = new TodoStorage();
+        this.storage = new HybridStorage();
         this.calendar = new CalendarManager();
         this.currentFilter = 'all';
         this.currentPersonFilter = 'both';
+        this.currentCategoryFilter = 'all';
         this.isAuthenticated = false;
+        this.roomId = null;
+        this.todos = [];
         this.init();
     }
 
@@ -144,28 +233,28 @@ class TodoCalendarApp {
         passcodeInput.focus();
     }
 
-    handleLogin() {
+    async handleLogin() {
         const passcode = document.getElementById('passcodeInput').value.trim();
-        
         if (!passcode) {
             alert('Please enter a passcode');
             return;
         }
-        
-        if (this.storage.verifyPasscode(passcode)) {
-            this.isAuthenticated = true;
-            document.getElementById('loginScreen').style.display = 'none';
-            document.getElementById('mainApp').style.display = 'block';
-            this.setupEventListeners();
-            this.render();
-        } else {
-            alert('Incorrect passcode. Please try again.');
-            document.getElementById('passcodeInput').value = '';
-        }
+        // Derive shared roomId from passcode
+        this.roomId = await sha256Hex(passcode);
+        localStorage.setItem('roomId', this.roomId);
+        this.storage.setRoomId(this.roomId);
+        this.isAuthenticated = true;
+        document.getElementById('loginScreen').style.display = 'none';
+        document.getElementById('mainApp').style.display = 'block';
+        this.setupEventListeners();
+        await this.refreshTodos();
+        this.render();
     }
 
     logout() {
         this.isAuthenticated = false;
+        this.roomId = null;
+        localStorage.removeItem('roomId');
         document.getElementById('loginScreen').style.display = 'flex';
         document.getElementById('mainApp').style.display = 'none';
         document.getElementById('passcodeInput').value = '';
@@ -182,13 +271,15 @@ class TodoCalendarApp {
         });
 
         // Calendar navigation
-        document.getElementById('prevMonth').addEventListener('click', () => {
+        document.getElementById('prevMonth').addEventListener('click', async () => {
             this.calendar.previousMonth();
+            await this.refreshTodos();
             this.renderCalendar();
         });
 
-        document.getElementById('nextMonth').addEventListener('click', () => {
+        document.getElementById('nextMonth').addEventListener('click', async () => {
             this.calendar.nextMonth();
+            await this.refreshTodos();
             this.renderCalendar();
         });
 
@@ -212,6 +303,21 @@ class TodoCalendarApp {
             });
         });
 
+        // Category filter buttons
+        document.querySelectorAll('.category-filter-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                document.querySelectorAll('.category-filter-btn').forEach(b => b.classList.remove('active'));
+                e.target.classList.add('active');
+                this.currentCategoryFilter = e.target.dataset.category;
+                this.renderTodoList();
+            });
+        });
+
+        // Category extras toggle
+        const categorySelect = document.getElementById('todoCategory');
+        categorySelect.addEventListener('change', () => this.updateCategoryExtras());
+        this.updateCategoryExtras();
+
         // Logout button
         document.getElementById('logoutBtn').addEventListener('click', () => this.logout());
 
@@ -220,9 +326,36 @@ class TodoCalendarApp {
         document.getElementById('todoDate').value = today;
     }
 
-    addTodo() {
+    updateCategoryExtras() {
+        const selected = document.getElementById('todoCategory').value;
+        const timeEl = document.getElementById('todoTime');
+        const notesEl = document.getElementById('todoNotes');
+
+        // Reset values
+        if (timeEl) timeEl.value = '';
+        if (notesEl) notesEl.value = '';
+
+        // Show/hide based on category
+        if (selected === 'Gjøremål') {
+            if (timeEl) timeEl.style.display = 'block';
+            if (notesEl) notesEl.style.display = 'none';
+        } else if (selected === 'Handling') {
+            if (timeEl) timeEl.style.display = 'none';
+            if (notesEl) notesEl.style.display = 'block';
+        } else {
+            if (timeEl) timeEl.style.display = 'none';
+            if (notesEl) notesEl.style.display = 'none';
+        }
+    }
+
+    async addTodo() {
         const todoText = document.getElementById('todoText').value.trim();
         const todoDate = document.getElementById('todoDate').value;
+        const todoCategory = document.getElementById('todoCategory').value;
+        const todoTime = document.getElementById('todoTime')?.value || '';
+        const todoNotesRaw = document.getElementById('todoNotes')?.value || '';
+
+        console.log('addTodo form values:', { todoText, todoDate, todoCategory, todoTime });
 
         if (!todoText) {
             alert('Please enter a todo item');
@@ -234,35 +367,66 @@ class TodoCalendarApp {
             return;
         }
 
+        if (!todoCategory) {
+            alert('Please select a category');
+            return;
+        }
+
+        // Category-specific validation
+        if (todoCategory === 'Gjøremål' && !todoTime) {
+            alert('Please select a time for Gjøremål');
+            return;
+        }
+
+        // Prepare notes array for Handling (one item per line)
+        const notes = todoCategory === 'Handling'
+            ? todoNotesRaw
+                .split('\n')
+                .map(n => n.trim())
+                .filter(n => n.length > 0)
+            : [];
+
         const todo = {
             text: todoText,
             date: todoDate,
+            category: todoCategory,
+            time: todoCategory === 'Gjøremål' ? todoTime : '',
+            notes: notes,
             createdAt: new Date().toISOString()
         };
 
-        this.storage.addTodo(todo);
+        console.log('Calling storage.addTodo with:', todo);
+        await this.storage.addTodo(todo);
+        console.log('Refreshing todos...');
+        await this.refreshTodos();
+        console.log('Todos after refresh:', this.todos);
         
         // Clear inputs
         document.getElementById('todoText').value = '';
         document.getElementById('todoDate').value = new Date().toISOString().split('T')[0];
+        document.getElementById('todoCategory').value = '';
+        if (document.getElementById('todoTime')) document.getElementById('todoTime').value = '';
+        if (document.getElementById('todoNotes')) document.getElementById('todoNotes').value = '';
+        this.updateCategoryExtras();
 
+        console.log('Rendering...');
         this.render();
     }
 
-    togglePersonStatus(todoId, person) {
-        const todos = this.storage.getTodos();
-        const todo = todos.find(t => t.id === todoId);
-        
+    async togglePersonStatus(todoId, person) {
+        const todo = (this.todos || []).find(t => t.id === todoId);
         if (todo) {
             const field = person === 1 ? 'person1Done' : 'person2Done';
-            this.storage.updateTodo(todoId, { [field]: !todo[field] });
+            await this.storage.updateTodo(todoId, { [field]: !todo[field] });
+            await this.refreshTodos();
             this.render();
         }
     }
 
-    deleteTodo(todoId) {
+    async deleteTodo(todoId) {
         if (confirm('Are you sure you want to delete this todo?')) {
-            this.storage.deleteTodo(todoId);
+            await this.storage.deleteTodo(todoId);
+            await this.refreshTodos();
             this.render();
         }
     }
@@ -270,6 +434,10 @@ class TodoCalendarApp {
     render() {
         this.renderCalendar();
         this.renderTodoList();
+    }
+
+    async refreshTodos() {
+        this.todos = await this.storage.getTodos();
     }
 
     renderCalendar() {
@@ -293,7 +461,7 @@ class TodoCalendarApp {
         // Get calendar data
         const firstDay = this.calendar.getFirstDayOfMonth();
         const daysInMonth = this.calendar.getDaysInMonth();
-        const todos = this.storage.getTodos();
+        const todos = this.todos || [];
 
         // Add empty cells for days before month starts
         for (let i = 0; i < firstDay; i++) {
@@ -328,7 +496,21 @@ class TodoCalendarApp {
                 dayTodos.slice(0, 2).forEach(todo => {
                     const todoIndicator = document.createElement('span');
                     todoIndicator.className = 'todo-indicator';
-                    todoIndicator.textContent = todo.text.substring(0, 15) + (todo.text.length > 15 ? '...' : '');
+                    const baseText = todo.text.substring(0, 12) + (todo.text.length > 12 ? '...' : '');
+                    const textWithTime = (todo.category === 'Gjøremål' && todo.time)
+                        ? `${todo.time} ${baseText}`
+                        : baseText;
+                    todoIndicator.textContent = textWithTime;
+
+                    // Add category color
+                    if (todo.category === 'Lekser') {
+                        todoIndicator.style.backgroundColor = '#2196F3';
+                    } else if (todo.category === 'Handling') {
+                        todoIndicator.style.backgroundColor = '#4CAF50';
+                    } else if (todo.category === 'Gjøremål') {
+                        todoIndicator.style.backgroundColor = '#FF9800';
+                    }
+
                     todosContainer.appendChild(todoIndicator);
                 });
 
@@ -355,7 +537,7 @@ class TodoCalendarApp {
 
     renderTodoList() {
         const todoListEl = document.getElementById('todoList');
-        let todos = this.storage.getTodos();
+        let todos = (this.todos || []).slice();
 
         // Sort by date
         todos.sort((a, b) => new Date(a.date) - new Date(b.date));
@@ -374,6 +556,11 @@ class TodoCalendarApp {
             todos = todos.filter(t => !t.person1Done);
         } else if (this.currentPersonFilter === 'person2') {
             todos = todos.filter(t => !t.person2Done);
+        }
+
+        // Apply category filter
+        if (this.currentCategoryFilter !== 'all') {
+            todos = todos.filter(t => t.category === this.currentCategoryFilter);
         }
 
         // Clear list
@@ -421,6 +608,22 @@ class TodoCalendarApp {
         header.appendChild(title);
         header.appendChild(date);
 
+        // Time badge for Gjøremål
+        if (todo.category === 'Gjøremål' && todo.time) {
+            const timeBadge = document.createElement('div');
+            timeBadge.className = 'todo-time';
+            timeBadge.textContent = todo.time;
+            header.appendChild(timeBadge);
+        }
+
+        // Category badge
+        const categoryBadge = document.createElement('div');
+        categoryBadge.className = 'category-badge';
+        categoryBadge.textContent = todo.category || 'Uncategorized';
+        categoryBadge.classList.add(`category-${todo.category ? todo.category.toLowerCase().replace('ø', 'o') : 'uncategorized'}`);
+
+        header.appendChild(categoryBadge);
+
         // Status section
         const statusSection = document.createElement('div');
         statusSection.className = 'todo-status';
@@ -462,6 +665,24 @@ class TodoCalendarApp {
         statusSection.appendChild(person1Status);
         statusSection.appendChild(person2Status);
 
+        // Notes list for Handling
+        if (todo.category === 'Handling' && todo.notes && todo.notes.length > 0) {
+            const notesContainer = document.createElement('div');
+            notesContainer.className = 'todo-notes';
+            const notesTitle = document.createElement('div');
+            notesTitle.className = 'notes-title';
+            notesTitle.textContent = 'Handleliste:';
+            const ul = document.createElement('ul');
+            todo.notes.forEach(n => {
+                const li = document.createElement('li');
+                li.textContent = n;
+                ul.appendChild(li);
+            });
+            notesContainer.appendChild(notesTitle);
+            notesContainer.appendChild(ul);
+            todoItem.appendChild(notesContainer);
+        }
+
         // Actions
         const actions = document.createElement('div');
         actions.className = 'todo-actions';
@@ -484,5 +705,16 @@ class TodoCalendarApp {
 
 // Initialize app when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
-    new TodoCalendarApp();
+    const app = new TodoCalendarApp();
+    // Auto-login if a roomId was previously saved
+    const savedRoom = localStorage.getItem('roomId');
+    if (savedRoom) {
+        app.roomId = savedRoom;
+        app.storage.setRoomId(savedRoom);
+        app.isAuthenticated = true;
+        document.getElementById('loginScreen').style.display = 'none';
+        document.getElementById('mainApp').style.display = 'block';
+        app.setupEventListeners();
+        app.refreshTodos().then(() => app.render());
+    }
 });

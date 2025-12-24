@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Shared Todo Calendar</title>
     <link rel="stylesheet" href="styles.css">
+    <!-- Supabase client for cross-device sync -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
     <!-- Login Screen -->
@@ -23,7 +25,7 @@
     <div class="container" id="mainApp" style="display: none;">
         <header>
             <h1>📅 Trym og Dina sin kalender</h1>
-            <p class="subtitle">Sånn at du aldri glemme nokka viktig igjen!</p>
+            <p class="subtitle">Sånn at vi aldri glemme nokka viktig igjen!</p>
         </header>
 
         <div class="main-content">
@@ -33,6 +35,15 @@
                 <div class="input-group">
                     <input type="text" id="todoText" placeholder="Ka skal gjøres?" />
                     <input type="date" id="todoDate" />
+                    <select id="todoCategory" class="category-select">
+                        <option value="">Velg kategori</option>
+                        <option value="Lekser">Lekser</option>
+                        <option value="Handling">Handling</option>
+                        <option value="Gjøremål">Gjøremål</option>
+                    </select>
+                    <!-- Category-specific extras -->
+                    <input type="time" id="todoTime" class="category-extra" data-for="Gjøremål" placeholder="Tid" style="display:none;" />
+                    <textarea id="todoNotes" class="category-extra" data-for="Handling" placeholder="Handleliste (én vare per linje)" style="display:none; min-height: 80px;"></textarea>
                     <button id="addTodoBtn" class="btn btn-primary">Add Todo</button>
                 </div>
             </section>
@@ -62,6 +73,12 @@
                     <button class="person-filter-btn active" data-person="both">👥 Begge</button>
                     <button class="person-filter-btn" data-person="person1">👤 Trym</button>
                     <button class="person-filter-btn" data-person="person2">👤 Dina</button>
+                </div>
+                <div class="category-filter-buttons">
+                    <button class="category-filter-btn active" data-category="all">All Categories</button>
+                    <button class="category-filter-btn" data-category="Lekser">📚 Lekser</button>
+                    <button class="category-filter-btn" data-category="Handling">🛒 Handling</button>
+                    <button class="category-filter-btn" data-category="Gjøremål">✓ Gjøremål</button>
                 </div>
                 <div id="todoList" class="todo-list"></div>
             </section>
