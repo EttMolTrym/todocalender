@@ -1,6 +1,6 @@
 # 📅 Shared Todo Calendar
 
-A simple, elegant web application for two people to manage shared activities with a calendar view. Perfect for couples, roommates, or any two people who want to track their shared todos.
+A simple, web application for two people to manage shared activities with a calendar view. Perfect for couples, roommates, or any two people who want to track their shared todos.
 
 ## ✨ Features
 
@@ -14,9 +14,6 @@ A simple, elegant web application for two people to manage shared activities wit
 - **Local Storage**: All data is stored locally in your browser - no server required
 - **Responsive Design**: Works great on desktop and mobile devices
 
-## 🚀 Live Demo
-
-Visit the live application at: `https://[your-username].github.io/todocalender/`
 
 ## 📖 How to Use
 
@@ -60,29 +57,6 @@ This repository is configured to work with GitHub Pages:
 5. Click "Save"
 6. Your site will be available at `https://[your-username].github.io/todocalender/`
 
-## 💾 Data Storage
-
-All todos are stored locally in your browser using localStorage. This means:
-- ✅ No internet connection required after initial load
-- ✅ Your data is private and never leaves your device
-- ⚠️ Data is specific to each browser/device
-- ⚠️ Clearing browser data will delete your todos
-
-## 📱 Browser Compatibility
-
-Works on all modern browsers:
-- Chrome/Edge (recommended)
-- Firefox
-- Safari
-- Opera
-
-## 🤝 Perfect For
-
-- Couples managing household tasks
-- Roommates tracking shared responsibilities
-- Project partners coordinating activities
-- Parents managing family activities
-- Friends planning events together
 
 ## 📝 License
 
